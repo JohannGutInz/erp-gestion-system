@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog } from '@/components/ui/dialog';
 import { useOrders } from '@/hooks/useOrders';
+import { useClients } from '@/hooks/useClients';
 import { useSellers } from '@/hooks/useSellers';
 import { useAccounting } from '@/hooks/useAccounting';
 import { OrderForm } from '@/components/OrderForm';
@@ -105,6 +106,8 @@ function AppContent() {
     updateOrderStatus,
     getOrders,
   } = useOrders(toast);
+
+  const { searchClients, addClient } = useClients(toast);
 
   const {
     sellers,
@@ -469,6 +472,8 @@ function AppContent() {
             sellers={sellers}
             editingOrder={editingOrder}
             setEditingOrder={setEditingOrder}
+            searchClients={searchClients}
+            addClient={addClient}
           />
         </Dialog>
 
