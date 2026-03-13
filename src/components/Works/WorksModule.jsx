@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, ArrowLeft, Download, HardHat, FileText } from 'lucide-react';
 import { WorksTable } from './WorksTable';
@@ -7,37 +7,37 @@ import { generateWorksExcel } from './generateWorksExcel';
 import { generateWorksControlPDF } from './generateWorksControlPDF';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from '@/components/ui/use-toast';
+import { useWorks } from '@/hooks/useWorks';
+
+// Supabase usa snake_case, WorkForm/WorksTable usan camelCase
+const mapToUI = (work) => ({
+  ...work,
+  clientNumber: work.client_number,
+  clientName: work.client_name,
+  startDate: work.start_date,
+  estatus: work.status,
+});
+
+const mapToHook = (formData) => ({
+  client_number: formData.clientNumber,
+  client_name: formData.clientName,
+  location: formData.location,
+  services: formData.services,
+  start_date: formData.startDate,
+  status: formData.estatus,
+  total: parseFloat(formData.total) || 0,
+  advance: parseFloat(formData.advance) || 0,
+  balance: (parseFloat(formData.total) || 0) - (parseFloat(formData.advance) || 0),
+});
 
 export const WorksModule = ({ onBack }) => {
   const { toast } = useToast();
-  const [works, setWorks] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { works, loading, addWork, updateWork, deleteWork } = useWorks(toast);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingWork, setEditingWork] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
 
-  // Load from LocalStorage
-  useEffect(() => {
-    const loadWorks = () => {
-      try {
-        const stored = localStorage.getItem('works_data');
-        if (stored) {
-          setWorks(JSON.parse(stored));
-        }
-      } catch (e) {
-        console.error("Failed to load works", e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadWorks();
-  }, []);
-
-  // Save to LocalStorage
-  const saveWorksToStorage = (newWorks) => {
-    localStorage.setItem('works_data', JSON.stringify(newWorks));
-    setWorks(newWorks);
-  };
+  const worksForUI = works.map(mapToUI);
 
   const handleAdd = () => {
     setEditingWork(null);
@@ -53,33 +53,19 @@ export const WorksModule = ({ onBack }) => {
     setDeleteId(id);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (deleteId) {
-      const newWorks = works.filter(w => w.id !== deleteId);
-      saveWorksToStorage(newWorks);
-      toast({
-        title: "Obra eliminada",
-        description: "El registro ha sido eliminado correctamente."
-      });
+      await deleteWork(deleteId);
       setDeleteId(null);
     }
   };
 
   const handleSave = async (formData) => {
-    // Simulate async operation
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // The formData includes all fields from WorkForm, including clientNumber
+    const hookData = mapToHook(formData);
     if (editingWork) {
-      const newWorks = works.map(w => w.id === editingWork.id ? { ...formData, id: w.id } : w);
-      saveWorksToStorage(newWorks);
+      await updateWork({ ...hookData, id: editingWork.id });
     } else {
-      const newWork = {
-        ...formData,
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString()
-      };
-      saveWorksToStorage([...works, newWork]);
+      await addWork(hookData);
     }
   };
 
@@ -92,7 +78,7 @@ export const WorksModule = ({ onBack }) => {
       });
       return;
     }
-    generateWorksExcel(works);
+    generateWorksExcel(worksForUI);
     toast({
       title: "Descargando Excel",
       description: "Generando archivo de control de obras...",
@@ -108,7 +94,7 @@ export const WorksModule = ({ onBack }) => {
       });
       return;
     }
-    generateWorksControlPDF(works);
+    generateWorksControlPDF(worksForUI);
     toast({
       title: "Descargando PDF",
       description: "Generando reporte de control de obras...",
@@ -133,7 +119,7 @@ export const WorksModule = ({ onBack }) => {
                 </div>
             </div>
         </div>
-        
+
         <div className="flex items-center gap-3 flex-wrap justify-end">
              <Button onClick={handleDownloadPDF} variant="outline" className="border-red-600/50 text-red-400 hover:bg-red-900/20 hover:text-red-300">
                 <FileText className="mr-2 h-4 w-4" /> PDF
@@ -147,18 +133,18 @@ export const WorksModule = ({ onBack }) => {
         </div>
       </div>
 
-      <WorksTable 
-        works={works} 
-        onEdit={handleEdit} 
-        onDelete={handleDeleteClick} 
-        isLoading={isLoading} 
+      <WorksTable
+        works={worksForUI}
+        onEdit={handleEdit}
+        onDelete={handleDeleteClick}
+        isLoading={loading}
       />
 
-      <WorkForm 
-        isOpen={isFormOpen} 
-        onClose={() => setIsFormOpen(false)} 
-        onSave={handleSave} 
-        initialData={editingWork} 
+      <WorkForm
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        onSave={handleSave}
+        initialData={editingWork}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
