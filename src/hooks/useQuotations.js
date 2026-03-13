@@ -100,9 +100,10 @@ export const useQuotations = (toast) => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('quotations')
-        .insert([newQuotation])
+        .insert([{ ...newQuotation, created_by: user?.id }])
         .select()
         .single();
 

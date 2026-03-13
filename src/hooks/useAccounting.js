@@ -130,9 +130,10 @@ export const useAccounting = (toast, orders) => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('transactions')
-        .insert([newTransaction])
+        .insert([{ ...newTransaction, created_by: user?.id }])
         .select()
         .single();
 

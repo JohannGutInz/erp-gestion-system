@@ -114,9 +114,10 @@ export const useWorks = (toast) => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('works')
-        .insert([newWork])
+        .insert([{ ...newWork, created_by: user?.id }])
         .select()
         .single();
 

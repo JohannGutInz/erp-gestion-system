@@ -106,9 +106,10 @@ export const useOrders = (toast) => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('orders')
-        .insert([newOrder])
+        .insert([{ ...newOrder, created_by: user?.id }])
         .select()
         .single();
       
