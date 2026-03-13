@@ -64,7 +64,7 @@ export const useAccounting = (toast, orders) => {
     if (isSupabaseConfigured && supabase) {
       fetchTransactions();
 
-      const channel = supabase.channel('realtime-transactions')
+      const channel = supabase.channel('realtime-transactions-' + Date.now())
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -147,9 +147,10 @@ export const useAccounting = (toast, orders) => {
         return { success: false, error };
       }
 
-      toast({ 
-        title: "¡Transacción agregada!", 
-        description: "Registrada en el sistema." 
+      setTransactions(prev => [data, ...prev]);
+      toast({
+        title: "¡Transacción agregada!",
+        description: "Registrada en el sistema."
       });
       return { success: true, data };
     } catch (err) {
@@ -194,9 +195,10 @@ export const useAccounting = (toast, orders) => {
         return { success: false, error };
       }
 
-      toast({ 
-        title: "Transacción eliminada", 
-        variant: "destructive" 
+      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      toast({
+        title: "Transacción eliminada",
+        variant: "destructive"
       });
       return { success: true };
     } catch (err) {

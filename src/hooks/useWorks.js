@@ -71,7 +71,7 @@ export const useWorks = (toast) => {
     if (isSupabaseConfigured && supabase) {
       fetchWorks();
 
-      const channel = supabase.channel('realtime-works')
+      const channel = supabase.channel('realtime-works-' + Date.now())
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -131,6 +131,7 @@ export const useWorks = (toast) => {
         return { success: false, error };
       }
 
+      setWorks(prev => [data, ...prev]);
       toast({
         title: "¡Obra creada!",
         description: "Nueva obra agregada al sistema."
@@ -180,6 +181,7 @@ export const useWorks = (toast) => {
         return { success: false, error };
       }
 
+      setWorks(prev => prev.map(w => w.id === data.id ? data : w));
       toast({
         title: "¡Obra actualizada!",
         description: "La obra se ha actualizado correctamente."
@@ -227,6 +229,7 @@ export const useWorks = (toast) => {
         return { success: false, error };
       }
 
+      setWorks(prev => prev.filter(w => w.id !== workId));
       toast({
         title: "Obra eliminada",
         description: "La obra ha sido eliminada del sistema.",
@@ -276,6 +279,7 @@ export const useWorks = (toast) => {
         return { success: false, error };
       }
 
+      setWorks(prev => prev.map(w => w.id === data.id ? data : w));
       toast({
         title: "Estado actualizado",
         description: "El estado de la obra ha sido actualizado."

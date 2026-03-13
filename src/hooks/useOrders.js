@@ -69,7 +69,7 @@ export const useOrders = (toast) => {
     if (isSupabaseConfigured && supabase) {
       fetchOrders();
       
-      const channel = supabase.channel('realtime-orders')
+      const channel = supabase.channel('realtime-orders-' + Date.now())
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -123,9 +123,10 @@ export const useOrders = (toast) => {
         return { success: false, error };
       }
       
-      toast({ 
-        title: "¡Orden creada!", 
-        description: "Nueva orden agregada al sistema." 
+      setOrders(prev => [data, ...prev]);
+      toast({
+        title: "¡Orden creada!",
+        description: "Nueva orden agregada al sistema."
       });
       return { success: true, data };
     } catch (err) {
@@ -171,9 +172,10 @@ export const useOrders = (toast) => {
         return { success: false, error };
       }
       
-      toast({ 
-        title: "¡Orden actualizada!", 
-        description: "La orden se ha actualizado correctamente." 
+      setOrders(prev => prev.map(o => o.id === data.id ? data : o));
+      toast({
+        title: "¡Orden actualizada!",
+        description: "La orden se ha actualizado correctamente."
       });
       return { success: true, data };
     } catch (err) {
@@ -218,10 +220,11 @@ export const useOrders = (toast) => {
         return { success: false, error };
       }
       
-      toast({ 
-        title: "Orden eliminada", 
-        description: "La orden ha sido eliminada del sistema.", 
-        variant: "destructive" 
+      setOrders(prev => prev.filter(o => o.id !== orderId));
+      toast({
+        title: "Orden eliminada",
+        description: "La orden ha sido eliminada del sistema.",
+        variant: "destructive"
       });
       return { success: true };
     } catch (err) {
@@ -269,9 +272,10 @@ export const useOrders = (toast) => {
         return { success: false, error };
       }
       
-      toast({ 
-        title: "Estado actualizado", 
-        description: "El estado de la orden ha sido actualizado." 
+      setOrders(prev => prev.map(o => o.id === data.id ? data : o));
+      toast({
+        title: "Estado actualizado",
+        description: "El estado de la orden ha sido actualizado."
       });
       return { success: true, data };
     } catch (err) {

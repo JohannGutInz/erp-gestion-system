@@ -64,7 +64,7 @@ export const useQuotations = (toast) => {
     if (isSupabaseConfigured && supabase) {
       fetchQuotations();
 
-      const channel = supabase.channel('realtime-quotations')
+      const channel = supabase.channel('realtime-quotations-' + Date.now())
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -117,9 +117,10 @@ export const useQuotations = (toast) => {
         return { success: false, error };
       }
 
-      toast({ 
-        title: "Cotización Guardada", 
-        description: "Sincronizada con la nube." 
+      setQuotations(prev => [data, ...prev]);
+      toast({
+        title: "Cotización Guardada",
+        description: "Sincronizada con la nube."
       });
       return { success: true, data };
     } catch (err) {
@@ -167,9 +168,10 @@ export const useQuotations = (toast) => {
         return { success: false, error };
       }
 
-      toast({ 
-        title: "Actualizada", 
-        description: "Cambios sincronizados." 
+      setQuotations(prev => prev.map(q => q.id === data.id ? data : q));
+      toast({
+        title: "Actualizada",
+        description: "Cambios sincronizados."
       });
       return { success: true, data };
     } catch (err) {
@@ -213,9 +215,10 @@ export const useQuotations = (toast) => {
         return { success: false, error };
       }
 
-      toast({ 
-        title: "Eliminada", 
-        description: "Cotización borrada permanentemente." 
+      setQuotations(prev => prev.filter(q => q.id !== id));
+      toast({
+        title: "Eliminada",
+        description: "Cotización borrada permanentemente."
       });
       return { success: true };
     } catch (err) {

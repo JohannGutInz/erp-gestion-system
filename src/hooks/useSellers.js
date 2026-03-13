@@ -74,7 +74,7 @@ export const useSellers = (toast, orders) => {
     if (isSupabaseConfigured && supabase) {
       fetchSellers();
 
-      const channel = supabase.channel('realtime-sellers')
+      const channel = supabase.channel('realtime-sellers-' + Date.now())
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -127,6 +127,7 @@ export const useSellers = (toast, orders) => {
         return { success: false, error };
       }
 
+      setSellers(prev => [data, ...prev]);
       toast({
         title: "¡Vendedor agregado!",
         description: "Nuevo vendedor registrado en el sistema.",
@@ -175,9 +176,10 @@ export const useSellers = (toast, orders) => {
         return { success: false, error };
       }
 
-      toast({ 
-        title: "Vendedor actualizado", 
-        description: "Los datos han sido guardados." 
+      setSellers(prev => prev.map(s => s.id === data.id ? data : s));
+      toast({
+        title: "Vendedor actualizado",
+        description: "Los datos han sido guardados."
       });
       return { success: true, data };
     } catch (err) {
@@ -222,10 +224,11 @@ export const useSellers = (toast, orders) => {
         return { success: false, error };
       }
 
-      toast({ 
-        title: "Vendedor eliminado", 
-        description: "El vendedor ha sido removido del sistema.", 
-        variant: "destructive" 
+      setSellers(prev => prev.filter(s => s.id !== id));
+      toast({
+        title: "Vendedor eliminado",
+        description: "El vendedor ha sido removido del sistema.",
+        variant: "destructive"
       });
       return { success: true };
     } catch (err) {
