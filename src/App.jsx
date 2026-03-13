@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar as CalendarIcon, Plus, Users, BarChart3, Package, Download, ArrowLeft, Droplets, Truck, ClipboardList, DollarSign, FileText, HardHat } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Users, BarChart3, Package, Download, ArrowLeft, Droplets, Truck, ClipboardList, DollarSign, FileText, HardHat, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/toaster';
 import { useToast } from '@/components/ui/use-toast';
@@ -26,6 +26,7 @@ import { LoginScreen } from '@/components/LoginScreen';
 import { IncomeRangeSelector } from '@/components/IncomeRangeSelector';
 import { BudgetPro } from '@/components/BudgetPro';
 import { WorksModule } from '@/components/Works/WorksModule';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 const AgendaCard = ({ icon, title, description, onClick, className }) => (
   <motion.div
@@ -84,9 +85,10 @@ const AgendaView = ({ title, serviceType, sellers, getOrders, openEditOrderDialo
 };
 
 
-function App() {
+function AppContent() {
   const { toast } = useToast();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { session, loading: authLoading, logout } = useAuth();
+  const isAuthenticated = !!session;
   const [currentView, setCurrentView] = useState('dashboard');
   const [isDownloading, setIsDownloading] = useState(false);
   const [pdfDateRange, setPdfDateRange] = useState({
@@ -145,22 +147,6 @@ function App() {
     setEditingSeller(seller);
     setSellerDialogOpen(true);
   }, []);
-
-  const handleLogin = (password) => {
-    if (password === '1234') {
-      setIsAuthenticated(true);
-      toast({
-        title: '¡Bienvenido!',
-        description: 'Has iniciado sesión correctamente.',
-      });
-    } else {
-      toast({
-        title: 'Error de acceso',
-        description: 'La contraseña es incorrecta.',
-        variant: 'destructive',
-      });
-    }
-  };
 
   const handleDownloadPDF = async (withPrices = true) => {
     if (!pdfDateRange?.from || !pdfDateRange?.to) {
@@ -318,6 +304,14 @@ function App() {
   };
 
 
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-grid-pattern">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500" />
+      </div>
+    );
+  }
+
   return (
     <>
       <Helmet>
@@ -334,7 +328,7 @@ function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <LoginScreen onLogin={handleLogin} />
+              <LoginScreen />
             </motion.div>
           ) : (
             <motion.div
@@ -362,6 +356,15 @@ function App() {
                       </div>
                     </div>
                     <div className="flex items-center flex-wrap justify-center gap-3">
+                      <Button
+                        onClick={logout}
+                        variant="ghost"
+                        size="icon"
+                        className="text-gray-400 hover:text-white hover:bg-gray-800"
+                        title="Cerrar sesión"
+                      >
+                        <LogOut className="w-4 h-4" />
+                      </Button>
                       {currentView !== 'budgetpro' && currentView !== 'sellers' && currentView !== 'works' && (
                           <>
                             <Popover>
@@ -483,6 +486,14 @@ function App() {
         <Toaster />
       </div>
     </>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

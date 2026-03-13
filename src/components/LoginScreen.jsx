@@ -4,14 +4,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lock } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
-export const LoginScreen = ({ onLogin }) => {
+export const LoginScreen = () => {
+  const { login } = useAuth();
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onLogin(password);
+    setLoading(true);
+    const { error } = await login(email, password);
+    setLoading(false);
+
+    if (error) {
+      toast({
+        title: 'Error de acceso',
+        description: 'Correo o contraseña incorrectos.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -28,14 +44,27 @@ export const LoginScreen = ({ onLogin }) => {
                 <Lock className="w-8 h-8 text-indigo-400" />
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold text-white">Acceso Protegido</CardTitle>
+            <CardTitle className="text-2xl font-bold text-white">Acceso al Sistema</CardTitle>
             <CardDescription className="text-gray-400">
-              Ingresa la contraseña para acceder al sistema de gestión.
+              Ingresa tu correo y contraseña para continuar.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent>
               <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Correo electrónico</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="usuario@empresa.com"
+                    className="bg-gray-900/50 border-gray-700 focus:ring-indigo-500"
+                    autoComplete="email"
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
                   <Input
@@ -46,13 +75,21 @@ export const LoginScreen = ({ onLogin }) => {
                     required
                     placeholder="••••••••"
                     className="bg-gray-900/50 border-gray-700 focus:ring-indigo-500"
+                    autoComplete="current-password"
                   />
                 </div>
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700">
-                Entrar
+              <Button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verificando...
+                  </>
+                ) : (
+                  'Entrar'
+                )}
               </Button>
             </CardFooter>
           </form>
