@@ -342,6 +342,15 @@ export const OrderForm = ({ isOpen, setIsOpen, addOrder, updateOrder, sellers, e
       return;
     }
 
+    if (!formState.client_id) {
+      toast({
+        title: 'Error',
+        description: 'Debes seleccionar o crear un cliente antes de guardar.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!formState.serviceType) {
       toast({
         title: 'Error',
