@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-export const useWorks = (toast) => {
+export const useWorks = (toast, companyId) => {
   const [works, setWorks] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,7 +30,7 @@ export const useWorks = (toast) => {
 
   // Modo online — fetch desde Supabase
   const fetchWorks = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured || !supabase || !companyId) {
       setLoading(false);
       return;
     }
@@ -40,6 +40,7 @@ export const useWorks = (toast) => {
       const { data, error } = await supabase
         .from('works')
         .select('*')
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -64,11 +65,11 @@ export const useWorks = (toast) => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, companyId]);
 
   // Suscripción realtime
   useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && companyId) {
       fetchWorks();
 
       const channel = supabase.channel('realtime-works-' + Date.now())
@@ -117,7 +118,7 @@ export const useWorks = (toast) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('works')
-        .insert([{ ...newWork, created_by: user?.id }])
+        .insert([{ ...newWork, created_by: user?.id, company_id: companyId }])
         .select()
         .single();
 

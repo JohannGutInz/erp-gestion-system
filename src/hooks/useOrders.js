@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { isValidUUID } from '@/lib/validators';
 
 const mapFromDb = (order) => ({
   ...order,
@@ -41,7 +42,7 @@ const mapToDb = (formData) => ({
   notes: formData.notes || '',
 });
 
-export const useOrders = (toast) => {
+export const useOrders = (toast, companyId) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,19 +55,23 @@ export const useOrders = (toast) => {
     if (!isSupabaseConfigured) {
       try {
         const localData = localStorage.getItem('construction-orders');
-        setOrders(localData ? JSON.parse(localData) : []);
+        const parsed = localData ? JSON.parse(localData) : [];
+        // Filtrar registros con seller_id numérico (ids legacy inválidos)
+        const valid = parsed.filter(o => !o.seller || isValidUUID(o.seller));
+        setOrders(valid);
       } catch (error) { setOrders([]); }
       finally { setLoading(false); }
     }
   }, []);
 
   const fetchOrders = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) { setLoading(false); return; }
+    if (!isSupabaseConfigured || !supabase || !companyId) { setLoading(false); return; }
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('orders')
         .select('*, clients(name, phone, address)')
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false });
       if (error) {
         console.error('Error fetching orders:', error);
@@ -77,10 +82,10 @@ export const useOrders = (toast) => {
       }
     } catch (err) { console.error(err); setOrders([]); }
     finally { setLoading(false); }
-  }, [toast]);
+  }, [toast, companyId]);
 
   useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && companyId) {
       fetchOrders();
       const channel = supabase.channel('realtime-orders-' + Date.now())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchOrders())
@@ -97,15 +102,29 @@ export const useOrders = (toast) => {
       return { success: true };
     }
     try {
+      const uuidFields = [
+        { key: 'client_id', label: 'cliente', value: order.client_id },
+        { key: 'seller',    label: 'vendedor', value: order.seller },
+        { key: 'companyId', label: 'empresa',  value: companyId },
+      ];
+      console.log('[addOrder] UUID check:', { client_id: order.client_id, seller_id: order.seller, companyId });
+      for (const f of uuidFields) {
+        if (!isValidUUID(f.value)) {
+          const msg = `${f.key} inválido — el ${f.label} seleccionado no tiene un ID UUID válido.`;
+          console.error(msg, f.value);
+          toast({ title: 'Error al crear orden', description: msg, variant: 'destructive' });
+          return { success: false, error: new Error(msg) };
+        }
+      }
       const { data: { user } } = await supabase.auth.getUser();
-      const { data, error } = await supabase.from('orders').insert([{ ...mapToDb(order), created_by: user?.id }]).select('*, clients(name, phone, address)').single();
+      const { data, error } = await supabase.from('orders').insert([{ ...mapToDb(order), created_by: user?.id, company_id: companyId }]).select('*, clients(name, phone, address)').single();
       if (error) { console.error(error); toast({ title: 'Error al crear orden', description: error.message, variant: 'destructive' }); return { success: false, error }; }
       const mapped = mapFromDb(data);
       setOrders(prev => [mapped, ...prev]);
       toast({ title: 'Orden creada', description: 'Nueva orden agregada al sistema.' });
       return { success: true, data: mapped };
     } catch (err) { console.error(err); toast({ title: 'Error inesperado', description: 'No se pudo crear la orden.', variant: 'destructive' }); return { success: false, error: err }; }
-  }, [toast, syncToLocalStorage]);
+  }, [toast, syncToLocalStorage, companyId]);
 
   const updateOrder = useCallback(async (updatedOrder) => {
     if (!isSupabaseConfigured || !supabase) {
@@ -113,6 +132,19 @@ export const useOrders = (toast) => {
       toast({ title: 'Orden actualizada', description: 'Actualizada localmente.' }); return { success: true };
     }
     try {
+      const uuidFields = [
+        { key: 'client_id', label: 'cliente', value: updatedOrder.client_id },
+        { key: 'seller',    label: 'vendedor', value: updatedOrder.seller },
+        { key: 'companyId', label: 'empresa',  value: companyId },
+      ];
+      for (const f of uuidFields) {
+        if (!isValidUUID(f.value)) {
+          const msg = `${f.key} inválido — el ${f.label} seleccionado no tiene un ID UUID válido.`;
+          console.error(msg, f.value);
+          toast({ title: 'Error al actualizar orden', description: msg, variant: 'destructive' });
+          return { success: false, error: new Error(msg) };
+        }
+      }
       const { id } = updatedOrder;
       const { data, error } = await supabase.from('orders').update(mapToDb(updatedOrder)).eq('id', id).select('*, clients(name, phone, address)').single();
       if (error) { console.error(error); toast({ title: 'Error al actualizar orden', description: error.message, variant: 'destructive' }); return { success: false, error }; }
@@ -121,7 +153,7 @@ export const useOrders = (toast) => {
       toast({ title: 'Orden actualizada', description: 'La orden se ha actualizado correctamente.' });
       return { success: true, data: mapped };
     } catch (err) { console.error(err); toast({ title: 'Error inesperado', description: 'No se pudo actualizar.', variant: 'destructive' }); return { success: false, error: err }; }
-  }, [toast, syncToLocalStorage]);
+  }, [toast, syncToLocalStorage, companyId]);
 
   const deleteOrder = useCallback(async (orderId) => {
     if (!isSupabaseConfigured || !supabase) {

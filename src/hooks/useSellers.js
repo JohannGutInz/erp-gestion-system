@@ -3,11 +3,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 const DEFAULT_SELLERS = [
-  { id: '1', name: 'Juan Pérez', phone: '662-123-4567', email: 'juan@empresa.com' },
-  { id: '2', name: 'María González', phone: '662-234-5678', email: 'maria@empresa.com' }
+  { id: 'a0000001-0000-4000-8000-000000000001', name: 'Juan Pérez', phone: '662-123-4567', email: 'juan@empresa.com' },
+  { id: 'a0000001-0000-4000-8000-000000000002', name: 'María González', phone: '662-234-5678', email: 'maria@empresa.com' }
 ];
 
-export const useSellers = (toast, orders) => {
+export const useSellers = (toast, orders, companyId) => {
   const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +39,7 @@ export const useSellers = (toast, orders) => {
   }, [syncToLocalStorage]);
 
   const fetchSellers = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured || !supabase || !companyId) {
       setLoading(false);
       return;
     }
@@ -49,6 +49,7 @@ export const useSellers = (toast, orders) => {
       const { data, error } = await supabase
         .from('sellers')
         .select('*')
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -59,8 +60,25 @@ export const useSellers = (toast, orders) => {
           variant: "destructive"
         });
         setSellers(DEFAULT_SELLERS);
+      } else if (data && data.length > 0) {
+        setSellers(data);
       } else {
-        setSellers(data && data.length > 0 ? data : DEFAULT_SELLERS);
+        // Tabla vacía — insertar DEFAULT_SELLERS para que las FK de orders no fallen
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          const toSeed = DEFAULT_SELLERS.map(s => ({
+            id: s.id,
+            name: s.name,
+            phone: s.phone,
+            email: s.email,
+            company_id: companyId,
+            created_by: user?.id,
+          }));
+          await supabase.from('sellers').upsert(toSeed, { onConflict: 'id', ignoreDuplicates: true });
+        } catch (seedErr) {
+          console.error('Error seeding default sellers:', seedErr);
+        }
+        setSellers(DEFAULT_SELLERS);
       }
     } catch (err) {
       console.error('Unexpected error fetching sellers:', err);
@@ -68,10 +86,10 @@ export const useSellers = (toast, orders) => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, companyId]);
 
   useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && companyId) {
       fetchSellers();
 
       const channel = supabase.channel('realtime-sellers-' + Date.now())
@@ -113,7 +131,7 @@ export const useSellers = (toast, orders) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('sellers')
-        .insert([{ ...newSeller, created_by: user?.id }])
+        .insert([{ ...newSeller, created_by: user?.id, company_id: companyId }])
         .select()
         .single();
 
@@ -142,7 +160,7 @@ export const useSellers = (toast, orders) => {
       });
       return { success: false, error: err };
     }
-  }, [toast, syncToLocalStorage]);
+  }, [toast, syncToLocalStorage, companyId]);
 
   const updateSeller = useCallback(async (updatedSeller) => {
     if (!isSupabaseConfigured || !supabase) {

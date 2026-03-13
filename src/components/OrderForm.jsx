@@ -10,6 +10,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Trash2, Search, UserPlus, X } from 'lucide-react';
+import { isValidUUID } from '@/lib/validators';
 
 const MUNICIPIOS_SONORA = [
   { value: 'aconchi', label: 'Aconchi' }, { value: 'agua prieta', label: 'Agua Prieta' }, { value: 'alamos', label: 'Alamos' }, { value: 'altar', label: 'Altar' }, { value: 'arivechi', label: 'Arivechi' }, { value: 'arizpe', label: 'Arizpe' }, { value: 'atil', label: 'Atil' }, { value: 'bacadéhuachi', label: 'Bacadéhuachi' }, { value: 'bacanora', label: 'Bacanora' }, { value: 'bacerac', label: 'Bacerac' }, { value: 'bacoachi', label: 'Bacoachi' }, { value: 'bácum', label: 'Bácum' }, { value: 'banámichi', label: 'Banámichi' }, { value: 'baviácora', label: 'Baviácora' }, { value: 'bavispe', label: 'Bavispe' }, { value: 'benjamín hill', label: 'Benjamín Hill' }, { value: 'caborca', label: 'Caborca' }, { value: 'cajeme', label: 'Cajeme' }, { value: 'cananea', label: 'Cananea' }, { value: 'carbó', label: 'Carbó' }, { value: 'la colorada', label: 'La Colorada' }, { value: 'cucurpe', label: 'Cucurpe' }, { value: 'cumpas', label: 'Cumpas' }, { value: 'divisaderos', label: 'Divisaderos' }, { value: 'empalme', label: 'Empalme' }, { value: 'etchojoa', label: 'Etchojoa' }, { value: 'fronteras', label: 'Fronteras' }, { value: 'granados', label: 'Granados' }, { value: 'guaymas', label: 'Guaymas' }, { value: 'hermosillo', label: 'Hermosillo' }, { value: 'huachinera', label: 'Huachinera' }, { value: 'huásabas', label: 'Huásabas' }, { value: 'huatabampo', label: 'Huatabampo' }, { value: 'huépac', label: 'Huépac' }, { value: 'imuris', label: 'Imuris' }, { value: 'magdalena', label: 'Magdalena' }, { value: 'mazatán', label: 'Mazatán' }, { value: 'moctezuma', label: 'Moctezuma' }, { value: 'naco', label: 'Naco' }, { value: 'nácori chico', label: 'Nácori Chico' }, { value: 'nacozari de garcía', label: 'Nacozari de García' }, { value: 'navojoa', label: 'Navojoa' }, { value: 'nogales', label: 'Nogales' }, { value: 'onavas', label: 'Onavas' }, { value: 'opodepe', label: 'Opodepe' }, { value: 'oquitoa', label: 'Oquitoa' }, { value: 'pitiquito', label: 'Pitiquito' }, { value: 'puerto peñasco', label: 'Puerto Peñasco' }, { value: 'quiriego', label: 'Quiriego' }, { value: 'rayón', label: 'Rayón' }, { value: 'rosario', label: 'Rosario' }, { value: 'sahuaripa', label: 'Sahuaripa' }, { value: 'san felipe de jesús', label: 'San Felipe de Jesús' }, { value: 'san javier', label: 'San Javier' }, { value: 'san luis río colorado', label: 'San Luis Río Colorado' }, { value: 'san miguel de horcasitas', label: 'San Miguel de Horcasitas' }, { value: 'san pedro de la cueva', label: 'San Pedro de la Cueva' }, { value: 'santa ana', label: 'Santa Ana' }, { value: 'santa cruz', label: 'Santa Cruz' }, { value: 'sáric', label: 'Sáric' }, { value: 'soyopa', label: 'Soyopa' }, { value: 'suaqui grande', label: 'Suaqui Grande' }, { value: 'tepache', label: 'Tepache' }, { value: 'trincheras', label: 'Trincheras' }, { value: 'tubutama', label: 'Tubutama' }, { value: 'ures', label: 'Ures' }, { value: 'villa hidalgo', label: 'Villa Hidalgo' }, { value: 'villa pesqueira', label: 'Villa Pesqueira' }, { value: 'yécora', label: 'Yécora' }
@@ -242,6 +243,18 @@ export const OrderForm = ({ isOpen, setIsOpen, addOrder, updateOrder, sellers, e
     }
   }, [editingOrder, isOpen]);
 
+  // Pre-seleccionar el primer vendedor disponible al crear una orden nueva
+  useEffect(() => {
+    if (isOpen && !editingOrder && sellers.length > 0) {
+      setFormState(prev => {
+        if (!prev.seller && isValidUUID(sellers[0].id)) {
+          return { ...prev, seller: sellers[0].id };
+        }
+        return prev;
+      });
+    }
+  }, [isOpen, editingOrder, sellers]);
+
   const closeDialog = useCallback(() => {
     setIsOpen(false);
     setEditingOrder(null);
@@ -342,10 +355,10 @@ export const OrderForm = ({ isOpen, setIsOpen, addOrder, updateOrder, sellers, e
       return;
     }
 
-    if (!formState.client_id) {
+    if (!formState.client_id || !isValidUUID(formState.client_id)) {
       toast({
         title: 'Error',
-        description: 'Debes seleccionar o crear un cliente antes de guardar.',
+        description: 'Debes seleccionar o crear un cliente válido antes de guardar.',
         variant: 'destructive'
       });
       return;

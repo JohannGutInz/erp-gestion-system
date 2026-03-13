@@ -135,6 +135,22 @@ isSupabaseConfigured?
 - **Toasts**: siempre via `useToast` de `@/components/ui/use-toast`
 - **Errores async**: `try/catch` + `console.error` + toast con `variant: "destructive"`
 - **Credenciales**: nunca hardcodear, siempre `import.meta.env.VITE_*`
+
+### Buenas Prácticas — IDs y Validaciones UUID
+
+- **IDs offline siempre con `crypto.randomUUID()`** — nunca `Date.now()`, `Math.random()`
+  ni ninguna otra estrategia que no produzca un UUID v4 válido
+- **Campos FK (`client_id`, `seller_id`, `company_id`) se validan antes de cualquier insert**
+  usando la función helper estándar:
+  ```js
+  const isValidUUID = (str) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  ```
+- **La validación ocurre en dos capas**: en el componente (handleSubmit) antes de llamar
+  al hook, y en el hook (addOrder/updateOrder) antes de llamar a Supabase
+- **Modo offline no llama a Supabase** — el guard de UUID aplica solo al path online,
+  pero los ids offline igualmente deben ser UUIDs para consistencia
+
 - **Estética**: fondo oscuro, glass-effect, colores por módulo:
   - azul → colados | verde → impermeabilización | naranja → obras
   - rosa → presupuestos | índigo → vendedores | esmeralda → contabilidad

@@ -2,7 +2,7 @@ import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-export const useQuotations = (toast) => {
+export const useQuotations = (toast, companyId) => {
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +29,7 @@ export const useQuotations = (toast) => {
   }, []);
 
   const fetchQuotations = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured || !supabase || !companyId) {
       setLoading(false);
       return;
     }
@@ -39,6 +39,7 @@ export const useQuotations = (toast) => {
       const { data, error } = await supabase
         .from('quotations')
         .select('*')
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -58,10 +59,10 @@ export const useQuotations = (toast) => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, companyId]);
 
   useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && companyId) {
       fetchQuotations();
 
       const channel = supabase.channel('realtime-quotations-' + Date.now())
@@ -103,7 +104,7 @@ export const useQuotations = (toast) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('quotations')
-        .insert([{ ...newQuotation, created_by: user?.id }])
+        .insert([{ ...newQuotation, created_by: user?.id, company_id: companyId }])
         .select()
         .single();
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-export const useAccounting = (toast, orders) => {
+export const useAccounting = (toast, orders, companyId) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +29,7 @@ export const useAccounting = (toast, orders) => {
   }, []);
 
   const fetchTransactions = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured || !supabase || !companyId) {
       setLoading(false);
       return;
     }
@@ -39,6 +39,7 @@ export const useAccounting = (toast, orders) => {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
+        .eq('company_id', companyId)
         .order('date', { ascending: false });
 
       if (error) {
@@ -58,10 +59,10 @@ export const useAccounting = (toast, orders) => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, companyId]);
 
   useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && companyId) {
       fetchTransactions();
 
       const channel = supabase.channel('realtime-transactions-' + Date.now())
@@ -133,7 +134,7 @@ export const useAccounting = (toast, orders) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('transactions')
-        .insert([{ ...newTransaction, created_by: user?.id }])
+        .insert([{ ...newTransaction, created_by: user?.id, company_id: companyId }])
         .select()
         .single();
 

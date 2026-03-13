@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect  } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar as CalendarIcon, Plus, Users, BarChart3, Package, Download, ArrowLeft, Droplets, Truck, ClipboardList, DollarSign, FileText, HardHat, LogOut } from 'lucide-react';
@@ -28,6 +28,7 @@ import { IncomeRangeSelector } from '@/components/IncomeRangeSelector';
 import { BudgetPro } from '@/components/BudgetPro';
 import { WorksModule } from '@/components/Works/WorksModule';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { isValidUUID } from '@/lib/validators';
 
 const AgendaCard = ({ icon, title, description, onClick, className }) => (
   <motion.div
@@ -88,7 +89,31 @@ const AgendaView = ({ title, serviceType, sellers, getOrders, openEditOrderDialo
 
 function AppContent() {
   const { toast } = useToast();
-  const { session, loading: authLoading, logout } = useAuth();
+  const { session, loading: authLoading, logout, companyId, noCompany } = useAuth();
+
+  // Dev-only: limpia datos con ids no-UUID que causarían error 400 en Supabase
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const KEYS = [
+        { key: 'construction-orders', idField: 'seller' },
+        { key: 'construction-sellers', idField: 'id' },
+        { key: 'construction-clients', idField: 'id' },
+      ];
+      KEYS.forEach(({ key, idField }) => {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          const arr = JSON.parse(raw);
+          const clean = arr.filter(r => !r[idField] || isValidUUID(r[idField]));
+          if (clean.length !== arr.length) {
+            localStorage.setItem(key, JSON.stringify(clean));
+            console.warn(`[dev] localStorage "${key}": eliminados ${arr.length - clean.length} registros con ids no-UUID`);
+          }
+        } catch (_) {}
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const isAuthenticated = !!session;
   const [currentView, setCurrentView] = useState('dashboard');
   const [isDownloading, setIsDownloading] = useState(false);
@@ -105,9 +130,9 @@ function AppContent() {
     deleteOrder,
     updateOrderStatus,
     getOrders,
-  } = useOrders(toast);
+  } = useOrders(toast, companyId);
 
-  const { searchClients, addClient } = useClients(toast);
+  const { searchClients, addClient } = useClients(toast, companyId);
 
   const {
     sellers,
@@ -115,7 +140,7 @@ function AppContent() {
     updateSeller,
     deleteSeller,
     getSellerStats,
-  } = useSellers(toast, orders);
+  } = useSellers(toast, orders, companyId);
 
   const {
     transactions,
@@ -123,7 +148,7 @@ function AppContent() {
     deleteTransaction,
     getTransactions,
     getSummary,
-  } = useAccounting(toast, orders);
+  } = useAccounting(toast, orders, companyId);
 
   const [isOrderDialogOpen, setOrderDialogOpen] = useState(false);
   const [isSellerDialogOpen, setSellerDialogOpen] = useState(false);
@@ -333,6 +358,25 @@ function AppContent() {
             >
               <LoginScreen />
             </motion.div>
+          ) : noCompany ? (
+            <motion.div
+              key="no-company"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center justify-center min-h-screen bg-grid-pattern"
+            >
+              <div className="glass-effect rounded-2xl p-8 max-w-md text-center space-y-4">
+                <HardHat className="w-12 h-12 text-orange-400 mx-auto" />
+                <h2 className="text-xl font-bold text-white">Sin empresa asignada</h2>
+                <p className="text-gray-400 text-sm">
+                  Tu cuenta no está asociada a ninguna empresa. Contacta al administrador.
+                </p>
+                <Button onClick={logout} variant="outline" className="border-gray-700">
+                  Cerrar sesión
+                </Button>
+              </div>
+            </motion.div>
           ) : (
             <motion.div
               key="app"
@@ -464,17 +508,19 @@ function AppContent() {
         </AnimatePresence>
 
         <Dialog open={isOrderDialogOpen} onOpenChange={setOrderDialogOpen}>
-          <OrderForm
-            isOpen={isOrderDialogOpen}
-            setIsOpen={setOrderDialogOpen}
-            addOrder={addOrder}
-            updateOrder={updateOrder}
-            sellers={sellers}
-            editingOrder={editingOrder}
-            setEditingOrder={setEditingOrder}
-            searchClients={searchClients}
-            addClient={addClient}
-          />
+          {companyId && (
+            <OrderForm
+              isOpen={isOrderDialogOpen}
+              setIsOpen={setOrderDialogOpen}
+              addOrder={addOrder}
+              updateOrder={updateOrder}
+              sellers={sellers}
+              editingOrder={editingOrder}
+              setEditingOrder={setEditingOrder}
+              searchClients={searchClients}
+              addClient={addClient}
+            />
+          )}
         </Dialog>
 
         <Dialog open={isSellerDialogOpen} onOpenChange={setSellerDialogOpen}>

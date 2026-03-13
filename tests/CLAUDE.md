@@ -79,6 +79,40 @@ WHERE schemaname = 'public';
 
 ---
 
+## Checklist de Validación de Formularios
+
+Antes de cualquier submit a Supabase verificar:
+
+- [ ] **`client_id`** — UUID válido (vía `isValidUUID`). Viene del buscador `ClientSearch`, nunca hardcodeado.
+- [ ] **`seller_id`** — UUID válido. `DEFAULT_SELLERS` en `useSellers.js` usa UUIDs fijos, nunca `'1'`/`'2'`.
+- [ ] **`company_id`** — UUID válido. Viene de `AuthContext.companyId` (Supabase). En offline no se envía a Supabase.
+- [ ] Todos los campos UUID anteriores pasan el regex
+      `/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i`
+- [ ] Campos requeridos no son `null`, `undefined` ni `''`
+- [ ] Campos numéricos son `Number()` válidos — verificar que no son `NaN`
+- [ ] Modo offline nunca genera ids con `Date.now()` para campos que son FK en Supabase
+      — usar siempre `crypto.randomUUID()`
+
+**Función helper estándar para validar UUID (copiar en hook o componente que la necesite):**
+```js
+const isValidUUID = (str) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+```
+
+## Escenarios a Probar en Cada Formulario
+
+| Escenario | Resultado esperado |
+|---|---|
+| Crear registro con todos los campos válidos | Guardado en Supabase, toast de éxito |
+| Crear registro sin cliente seleccionado | Toast de error antes del insert |
+| Crear registro en modo offline, luego sincronizar | UUID válido en localStorage, sin error al sync |
+| Editar registro existente sin cambiar cliente | `client_id` conservado del registro original |
+| Editar registro legacy sin `client_id` | Toast de error descriptivo, no FK violation |
+| `addClient` en modo online | Retorna UUID real de Supabase |
+| `addClient` en modo offline | Retorna UUID via `crypto.randomUUID()` |
+
+---
+
 ## Auditoría de RLS — Guía Completa
 
 ### Política mínima requerida por tabla

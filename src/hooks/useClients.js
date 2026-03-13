@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-export const useClients = (toast) => {
+export const useClients = (toast, companyId) => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +29,7 @@ export const useClients = (toast) => {
   }, []);
 
   const fetchClients = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured || !supabase || !companyId) {
       setLoading(false);
       return;
     }
@@ -39,6 +39,7 @@ export const useClients = (toast) => {
       const { data, error } = await supabase
         .from('clients')
         .select('*')
+        .eq('company_id', companyId)
         .order('name', { ascending: true });
 
       if (error) {
@@ -58,11 +59,11 @@ export const useClients = (toast) => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, companyId]);
 
   // Suscripción realtime
   useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
+    if (isSupabaseConfigured && supabase && companyId) {
       fetchClients();
 
       const channel = supabase
@@ -87,7 +88,7 @@ export const useClients = (toast) => {
     if (!isSupabaseConfigured || !supabase) {
       const localClient = {
         ...newClient,
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
       };
       setClients(prev => {
@@ -103,7 +104,7 @@ export const useClients = (toast) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('clients')
-        .insert([{ ...newClient, created_by: user?.id }])
+        .insert([{ ...newClient, created_by: user?.id, company_id: companyId }])
         .select()
         .single();
 
