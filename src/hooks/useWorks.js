@@ -103,7 +103,7 @@ export const useWorks = (toast, companyId) => {
 
     if (!isSupabaseConfigured || !supabase) {
       setWorks(prev => {
-        const updated = [{ ...newWork, id: Date.now().toString(), created_at: new Date().toISOString() }, ...prev];
+        const updated = [{ ...newWork, id: crypto.randomUUID(), created_at: new Date().toISOString() }, ...prev];
         syncToLocalStorage(updated);
         return updated;
       });

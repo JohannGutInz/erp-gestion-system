@@ -117,7 +117,7 @@ export const useAccounting = (toast, orders, companyId) => {
     if (!isSupabaseConfigured || !supabase) {
       setTransactions(prev => {
         const newTransactions = [
-          { ...newTransaction, id: Date.now().toString() }, 
+          { ...newTransaction, id: crypto.randomUUID() },
           ...prev
         ];
         syncToLocalStorage(newTransactions);

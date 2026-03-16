@@ -96,7 +96,7 @@ export const useOrders = (toast, companyId) => {
 
   const addOrder = useCallback(async (order) => {
     if (!isSupabaseConfigured || !supabase) {
-      const lo = { ...order, id: Date.now().toString(), created_at: new Date().toISOString(), viguetaDetails: order.viguetaDetails || [] };
+      const lo = { ...order, id: crypto.randomUUID(), created_at: new Date().toISOString(), viguetaDetails: order.viguetaDetails || [] };
       setOrders(prev => { const n=[lo,...prev]; syncToLocalStorage(n); return n; });
       toast({ title: 'Orden creada', description: 'Guardada localmente.' });
       return { success: true };

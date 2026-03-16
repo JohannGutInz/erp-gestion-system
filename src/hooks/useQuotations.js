@@ -89,7 +89,7 @@ export const useQuotations = (toast, companyId) => {
 
     if (!isSupabaseConfigured || !supabase) {
       setQuotations(prev => {
-        const newQuotations = [{ ...newQuotation, id: Date.now().toString() }, ...prev];
+        const newQuotations = [{ ...newQuotation, id: crypto.randomUUID() }, ...prev];
         syncToLocalStorage(newQuotations);
         return newQuotations;
       });

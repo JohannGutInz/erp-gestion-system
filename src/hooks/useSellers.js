@@ -116,7 +116,7 @@ export const useSellers = (toast, orders, companyId) => {
 
     if (!isSupabaseConfigured || !supabase) {
       setSellers(prev => {
-        const newSellers = [...prev, { ...newSeller, id: Date.now().toString() }];
+        const newSellers = [...prev, { ...newSeller, id: crypto.randomUUID() }];
         syncToLocalStorage(newSellers);
         return newSellers;
       });
